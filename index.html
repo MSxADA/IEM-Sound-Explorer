@@ -156,24 +156,23 @@
     <script>
         // --- DATA ---
         const filterData = {
-            Black: { color: 0x444444, adjustment: 0, recommendedGenres: ["Classic Rock", "Yacht Rock", "Blues", "Country/Grass"] },
+            Black: { color: 0x444444, adjustment: 0, recommendedGenres: ["Classic Rock", "Blues", "Country"] },
             Silver: { color: 0xCCCCCC, adjustment: 6, recommendedGenres: ["Metal (Analysis)", "Classical"] },
-            Blue: { color: 0x4169E1, adjustment: 3, recommendedGenres: ["Metal", "Dance/Electronic"] },
+            Blue: { color: 0x4169E1, adjustment: 3, recommendedGenres: ["Metal", "EDM/Electro"] },
             Gold: { color: 0xDAA520, adjustment: -3, recommendedGenres: ["Jazz", "Acoustic/Folk", "R&B"] },
             Red: { color: 0xB22222, adjustment: -8, recommendedGenres: ["Reggae", "Funk", "Rap"] }
         };
 
         const genreData = {
             "Classic Rock": { filter: "Black", mode: "MONITOR", description: "A neutral profile that lets the classic mid-range tones of guitars and vocals shine through with authenticity." },
-            "Yacht Rock": { filter: "Black", mode: "MONITOR", description: "Smooth and balanced, perfect for the clean production and layered instrumentation of Yacht Rock." },
             "Metal": { filter: "Blue", mode: "MONITOR", description: "For aggressive and complex instrumentation, the Blue filter in MONITOR mode provides a +3dB boost to the upper-midrange, enhancing the bite of distorted guitars and ensuring crisp drums." },
             "Desert Metal": { filter: "Blue", mode: "POP", description: "A powerful V-shape with enhanced mids brings out the sludgy, fuzzy guitar tones and heavy rhythm sections characteristic of the genre." },
             "Jazz": { filter: "Gold", mode: "MONITOR", description: "A relaxed upper-midrange allows for a smooth, natural presentation of horns, pianos, and vocals without any harshness." },
             "Reggae": { filter: "Red", mode: "POP", description: "Deep, powerful bass and a laid-back top end create the perfect vibe for iconic reggae basslines and relaxed grooves." },
-            "Dance/Electronic": { filter: "Blue", mode: "POP", description: "Combines impactful bass with exciting, clear highs, making synths and electronic beats feel energetic and immersive." },
+            "EDM/Electro": { filter: "Blue", mode: "POP", description: "Combines impactful bass with exciting, clear highs, making synths and electronic beats feel energetic and immersive." },
             "Classical": { filter: "Silver", mode: "MONITOR", description: "Maximizes detail retrieval, bringing out the subtle nuances of orchestral instruments and complex arrangements." },
             "Acoustic/Folk": { filter: "Gold", mode: "MONITOR", description: "A warm, intimate sound that beautifully renders the natural timbre of acoustic guitars and vocals." },
-            "Country/Grass": { filter: "Black", mode: "MONITOR", description: "A balanced and honest presentation that's ideal for the intricate string work and heartfelt vocals of country and bluegrass." },
+            "Country": { filter: "Black", mode: "MONITOR", description: "A balanced and honest presentation that's ideal for the intricate string work and heartfelt vocals of country and bluegrass." },
             "Blues": { filter: "Black", mode: "MONITOR", description: "Delivers a raw and expressive midrange, perfect for capturing the soul of blues guitar and vocals." },
             "R&B": { filter: "Gold", mode: "POP", description: "Smooth, rich bass combined with silky vocals creates a lush and soulful listening experience." },
             "Funk": { filter: "Red", mode: "POP", description: "This warm and bass-rich signature is excellent for groovy basslines and the rhythmic complexity of Funk." },
