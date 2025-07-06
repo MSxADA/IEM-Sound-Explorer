@@ -1,425 +1,470 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { ChevronDown, Moon, Sun } from 'lucide-react'; // Using Lucide React for icons
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Intergalactic IEM Sonic Spectrometer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #101010;
+            color: #e5e5e5; /* neutral-200 */
+            overflow-y: auto;
+        }
+        .glass-panel {
+            background: rgba(23, 23, 23, 0.6); /* neutral-900 with alpha */
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glowing-text-teal {
+            color: #00F6F6;
+            text-shadow: 0 0 12px rgba(0, 246, 246, 0.7);
+        }
+         .glowing-text-purple {
+            color: #C07CFF;
+            text-shadow: 0 0 12px rgba(192, 124, 255, 0.7);
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #404040; /* neutral-700 */
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #00F6F6;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        .genre-btn {
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .genre-btn:hover {
+            background-color: #00F6F6;
+            color: #101010;
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px rgba(0, 246, 246, 0.6);
+        }
+        .genre-btn.active {
+            background-color: #00F6F6;
+            color: #101010;
+            box-shadow: 0 0 15px rgba(0, 246, 246, 0.6);
+        }
+        #renderer-container {
+            width: 100%;
+            height: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div id="renderer-container"></div>
 
-// Approximated Frequency Response Data from the manual images
-// Frequencies (Hz): [20, 50, 100, 200, 500, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 12000, 15000, 20000]
-const frequencyResponseData = [
-  // Pop Mode Curves
-  {
-    mode: "Pop",
-    filter: "Stainless Steel",
-    curve: [
-      { freq: 20, db: 95 }, { freq: 50, db: 100 }, { freq: 100, db: 105 }, { freq: 200, db: 108 }, { freq: 500, db: 110 },
-      { freq: 1000, db: 110 }, { freq: 2000, db: 107 }, { freq: 3000, db: 105 }, { freq: 4000, db: 108 }, { freq: 5000, db: 112 },
-      { freq: 6000, db: 110 }, { freq: 7000, db: 108 }, { freq: 8000, db: 105 }, { freq: 9000, db: 103 }, { freq: 10000, db: 105 },
-      { freq: 12000, db: 100 }, { freq: 15000, db: 95 }, { freq: 20000, db: 90 },
-    ],
-    description: "A balanced sound with a slight emphasis on bass and upper mids, typical for a lively 'Pop' signature.",
-  },
-  {
-    mode: "Pop",
-    filter: "Red",
-    curve: [
-      { freq: 20, db: 97 }, { freq: 50, db: 102 }, { freq: 100, db: 107 }, { freq: 200, db: 110 }, { freq: 500, db: 112 },
-      { freq: 1000, db: 112 }, { freq: 2000, db: 108 }, { freq: 3000, db: 106 }, { freq: 4000, db: 109 }, { freq: 5000, db: 111 },
-      { freq: 6000, db: 109 }, { freq: 7000, db: 107 }, { freq: 8000, db: 104 }, { freq: 9000, db: 102 }, { freq: 10000, db: 104 },
-      { freq: 12000, db: 99 }, { freq: 15000, db: 94 }, { freq: 20000, db: 89 },
-    ],
-    description: "Enhanced bass and a slightly smoother treble, providing a warm and impactful sound.",
-  },
-  {
-    mode: "Pop",
-    filter: "Blue",
-    curve: [
-      { freq: 20, db: 95 }, { freq: 50, db: 100 }, { freq: 100, db: 105 }, { freq: 200, db: 108 }, { freq: 500, db: 110 },
-      { freq: 1000, db: 110 }, { freq: 2000, db: 107 }, { freq: 3000, db: 105 }, { freq: 4000, db: 108 }, { freq: 5000, db: 112 },
-      { freq: 6000, db: 110 }, { freq: 7000, db: 108 }, { freq: 8000, db: 105 }, { freq: 9000, db: 103 }, { freq: 10000, db: 105 },
-      { freq: 12000, db: 100 }, { freq: 15000, db: 95 }, { freq: 20000, db: 90 },
-    ],
-    description: "Very similar to Stainless Steel, offering a balanced and versatile sound with a slightly smoother high-end.",
-  },
-  {
-    mode: "Pop",
-    filter: "Green",
-    curve: [
-      { freq: 20, db: 93 }, { freq: 50, db: 98 }, { freq: 100, db: 103 }, { freq: 200, db: 106 }, { freq: 500, db: 108 },
-      { freq: 1000, db: 108 }, { freq: 2000, db: 106 }, { freq: 3000, db: 107 }, { freq: 4000, db: 110 }, { freq: 5000, db: 114 },
-      { freq: 6000, db: 112 }, { freq: 7000, db: 110 }, { freq: 8000, db: 107 }, { freq: 9000, db: 105 }, { freq: 10000, db: 107 },
-      { freq: 12000, db: 102 }, { freq: 15000, db: 97 }, { freq: 20000, db: 92 },
-    ],
-    description: "A brighter sound with less bass and more emphasis on the upper mids and lower treble, enhancing detail.",
-  },
-  {
-    mode: "Pop",
-    filter: "Gold",
-    curve: [
-      { freq: 20, db: 98 }, { freq: 50, db: 103 }, { freq: 100, db: 108 }, { freq: 200, db: 111 }, { freq: 500, db: 113 },
-      { freq: 1000, db: 113 }, { freq: 2000, db: 109 }, { freq: 3000, db: 107 }, { freq: 4000, db: 110 }, { freq: 5000, db: 115 },
-      { freq: 6000, db: 113 }, { freq: 7000, db: 111 }, { freq: 8000, db: 108 }, { freq: 9000, db: 106 }, { freq: 10000, db: 108 },
-      { freq: 12000, db: 103 }, { freq: 15000, db: 98 }, { freq: 20000, db: 93 },
-    ],
-    description: "The most V-shaped signature in Pop mode, with prominent bass and treble peaks for an energetic and impactful sound.",
-  },
-  {
-    mode: "Pop",
-    filter: "Silver",
-    curve: [
-      { freq: 20, db: 92 }, { freq: 50, db: 97 }, { freq: 100, db: 102 }, { freq: 200, db: 105 }, { freq: 500, db: 107 },
-      { freq: 1000, db: 107 }, { freq: 2000, db: 105 }, { freq: 3000, db: 103 }, { freq: 4000, db: 106 }, { freq: 5000, db: 110 },
-      { freq: 6000, db: 108 }, { freq: 7000, db: 106 }, { freq: 8000, db: 103 }, { freq: 9000, db: 101 }, { freq: 10000, db: 103 },
-      { freq: 12000, db: 98 }, { freq: 15000, db: 93 }, { freq: 20000, db: 88 },
-    ],
-    description: "A more neutral sound in Pop mode with less bass emphasis, providing a cleaner and more analytical presentation.",
-  },
-  // Monitor Mode Curves
-  {
-    mode: "Monitor",
-    filter: "Stainless Steel",
-    curve: [
-      { freq: 20, db: 90 }, { freq: 50, db: 95 }, { freq: 100, db: 100 }, { freq: 200, db: 103 }, { freq: 500, db: 105 },
-      { freq: 1000, db: 105 }, { freq: 2000, db: 103 }, { freq: 3000, db: 100 }, { freq: 4000, db: 102 }, { freq: 5000, db: 105 },
-      { freq: 6000, db: 103 }, { freq: 7000, db: 101 }, { freq: 8000, db: 98 }, { freq: 9000, db: 96 }, { freq: 10000, db: 98 },
-      { freq: 12000, db: 93 }, { freq: 15000, db: 88 }, { freq: 20000, db: 83 },
-    ],
-    description: "A generally flatter and more neutral sound signature compared to Pop mode, designed for accurate monitoring.",
-  },
-  {
-    mode: "Monitor",
-    filter: "Red",
-    curve: [
-      { freq: 20, db: 92 }, { freq: 50, db: 97 }, { freq: 100, db: 102 }, { freq: 200, db: 105 }, { freq: 500, db: 107 },
-      { freq: 1000, db: 107 }, { freq: 2000, db: 104 }, { freq: 3000, db: 101 }, { freq: 4000, db: 103 }, { freq: 5000, db: 106 },
-      { freq: 6000, db: 104 }, { freq: 7000, db: 102 }, { freq: 8000, db: 99 }, { freq: 9000, db: 97 }, { freq: 10000, db: 99 },
-      { freq: 12000, db: 94 }, { freq: 15000, db: 89 }, { freq: 20000, db: 84 },
-    ],
-    description: "Slightly more bass emphasis than the standard Monitor mode, offering a fuller sound while maintaining neutrality.",
-  },
-  {
-    mode: "Monitor",
-    filter: "Blue",
-    curve: [
-      { freq: 20, db: 91 }, { freq: 50, db: 96 }, { freq: 100, db: 101 }, { freq: 200, db: 104 }, { freq: 500, db: 106 },
-      { freq: 1000, db: 106 }, { freq: 2000, db: 103 }, { freq: 3000, db: 100 }, { freq: 4000, db: 102 }, { freq: 5000, db: 105 },
-      { freq: 6000, db: 103 }, { freq: 7000, db: 101 }, { freq: 8000, db: 98 }, { freq: 9000, db: 96 }, { freq: 10000, db: 98 },
-      { freq: 12000, db: 93 }, { freq: 15000, db: 88 }, { freq: 20000, db: 83 },
-    ],
-    description: "Very similar to Stainless Steel in Monitor mode, providing a balanced and accurate sound with a subtle warmth.",
-  },
-  {
-    mode: "Monitor",
-    filter: "Green",
-    curve: [
-      { freq: 20, db: 88 }, { freq: 50, db: 93 }, { freq: 100, db: 98 }, { freq: 200, db: 101 }, { freq: 500, db: 103 },
-      { freq: 1000, db: 103 }, { freq: 2000, db: 102 }, { freq: 3000, db: 101 }, { freq: 4000, db: 103 }, { freq: 5000, db: 106 },
-      { freq: 6000, db: 104 }, { freq: 7000, db: 102 }, { freq: 8000, db: 99 }, { freq: 9000, db: 97 }, { freq: 10000, db: 99 },
-      { freq: 12000, db: 94 }, { freq: 15000, db: 89 }, { freq: 20000, db: 84 },
-    ],
-    description: "A slightly brighter Monitor sound, emphasizing clarity in the upper mids and lower treble for detailed listening.",
-  },
-  {
-    mode: "Monitor",
-    filter: "Gold",
-    curve: [
-      { freq: 20, db: 93 }, { freq: 50, db: 98 }, { freq: 100, db: 103 }, { freq: 200, db: 106 }, { freq: 500, db: 108 },
-      { freq: 1000, db: 108 }, { freq: 2000, db: 105 }, { freq: 3000, db: 102 }, { freq: 4000, db: 104 }, { freq: 5000, db: 107 },
-      { freq: 6000, db: 105 }, { freq: 7000, db: 103 }, { freq: 8000, db: 100 }, { freq: 9000, db: 98 }, { freq: 10000, db: 100 },
-      { freq: 12000, db: 95 }, { freq: 15000, db: 90 }, { freq: 20000, db: 85 },
-    ],
-    description: "A more dynamic Monitor sound with a subtle V-shape, providing a bit more excitement while retaining accuracy.",
-  },
-  {
-    mode: "Monitor",
-    filter: "Silver",
-    curve: [
-      { freq: 20, db: 87 }, { freq: 50, db: 92 }, { freq: 100, db: 97 }, { freq: 200, db: 100 }, { freq: 500, db: 102 },
-      { freq: 1000, db: 102 }, { freq: 2000, db: 100 }, { freq: 3000, db: 97 }, { freq: 4000, db: 99 }, { freq: 5000, db: 102 },
-      { freq: 6000, db: 100 }, { freq: 7000, db: 98 }, { freq: 8000, db: 95 }, { freq: 9000, db: 93 }, { freq: 10000, db: 95 },
-      { freq: 12000, db: 90 }, { freq: 15000, db: 85 }, { freq: 20000, db: 80 },
-    ],
-    description: "The most neutral and flat signature in Monitor mode, ideal for critical listening and analytical tasks.",
-  },
-];
-
-// Genre Recommendation Data
-const genreRecommendations = [
-  { genre: "Rock/Classic Rock", recommendedMode: "Pop", recommendedFilter: "Red", description: "This configuration provides a punchy bass and clear, energetic mids, perfect for classic rock anthems and modern rock riffs." },
-  { genre: "Yacht Rock", recommendedMode: "Pop", recommendedFilter: "Blue", description: "A smooth and laid-back sound with a slightly elevated bass, ideal for the relaxed grooves of yacht rock." },
-  { genre: "Metal", recommendedMode: "Pop", recommendedFilter: "Gold", description: "With an aggressive V-shape, this setting delivers impactful bass for heavy drums and pronounced highs for cymbal clarity, essential for metal." },
-  { genre: "Stoner Rock", recommendedMode: "Pop", recommendedFilter: "Red", description: "A warm and weighty sound with a strong low-end presence, enhancing the thick, fuzzy guitar tones and powerful rhythm sections of stoner rock." },
-  { genre: "Jazz", recommendedMode: "Monitor", recommendedFilter: "Silver", description: "A neutral and accurate sound signature that allows for precise instrument separation and natural timbre, perfect for intricate jazz performances." },
-  { genre: "Reggae", recommendedMode: "Pop", recommendedFilter: "Red", description: "Emphasizes the deep, resonant basslines and clear, rhythmic percussion crucial to reggae music." },
-  { genre: "Dance/Electronic", recommendedMode: "Pop", recommendedFilter: "Gold", description: "Delivers a powerful bass response and sparkling highs, providing the energy and impact needed for electronic dance music." },
-  { genre: "Classical", recommendedMode: "Monitor", recommendedFilter: "Silver", description: "A flat and uncolored sound, ensuring faithful reproduction of orchestral dynamics and instrument nuances, ideal for classical pieces." },
-  { genre: "Acoustic/Folk", recommendedMode: "Monitor", recommendedFilter: "Green", description: "Provides a natural and intimate soundstage, bringing out the warmth of acoustic instruments and the clarity of vocals." },
-  { genre: "Country/Bluegrass", recommendedMode: "Monitor", recommendedFilter: "Green", description: "Offers a clear and articulate sound, highlighting vocals and the distinct textures of acoustic instruments common in country and bluegrass." },
-  { genre: "Blues", recommendedMode: "Pop", recommendedFilter: "Blue", description: "A rich and warm sound with a slight mid-range emphasis, perfect for soulful vocals and the expressive tones of blues guitars." },
-  { genre: "R&B", recommendedMode: "Pop", recommendedFilter: "Red", description: "Delivers a smooth, impactful bass and clear, present vocals, creating a lush and engaging sound for R&B tracks." },
-  { genre: "Funk", recommendedMode: "Pop", recommendedFilter: "Gold", description: "A dynamic and energetic sound with punchy bass and crisp highs, accentuating the rhythmic complexity and vibrant instrumentation of funk." },
-  { genre: "Rap", recommendedMode: "Pop", recommendedFilter: "Gold", description: "Provides a deep, resonant bass and clear vocal presence, crucial for the impactful beats and articulate lyrics of rap music." },
-];
-
-const filters = ["Stainless Steel", "Red", "Blue", "Green", "Gold", "Silver"];
-
-function App() {
-  const [selectedMode, setSelectedMode] = useState("Pop");
-  const [selectedFilter, setSelectedFilter] = useState("Stainless Steel");
-  const [selectedGenre, setSelectedGenre] = useState("");
-  const [currentDescription, setCurrentDescription] = useState("");
-  const [suggestedGenresForConfig, setSuggestedGenresForConfig] = useState([]);
-
-  // Function to get the current frequency curve based on selections
-  const getCurrentCurve = useCallback(() => {
-    return frequencyResponseData.find(
-      (data) => data.mode === selectedMode && data.filter === selectedFilter
-    );
-  }, [selectedMode, selectedFilter]);
-
-  // Effect to update description and suggested genres when mode/filter changes
-  useEffect(() => {
-    const currentConfig = getCurrentCurve();
-    if (currentConfig) {
-      setCurrentDescription(currentConfig.description);
-
-      // Determine suggested genres for the current configuration
-      const genres = genreRecommendations
-        .filter(
-          (rec) =>
-            rec.recommendedMode === selectedMode &&
-            rec.recommendedFilter === selectedFilter
-        )
-        .map((rec) => rec.genre);
-      setSuggestedGenresForConfig(genres);
-    }
-    // Reset selected genre when manual configuration changes
-    setSelectedGenre("");
-  }, [selectedMode, selectedFilter, getCurrentCurve]);
-
-  // Handle genre selection
-  const handleGenreChange = (e) => {
-    const genre = e.target.value;
-    setSelectedGenre(genre);
-
-    if (genre) {
-      const recommendation = genreRecommendations.find(
-        (rec) => rec.genre === genre
-      );
-      if (recommendation) {
-        setSelectedMode(recommendation.recommendedMode);
-        setSelectedFilter(recommendation.recommendedFilter);
-        setCurrentDescription(recommendation.description);
-        setSuggestedGenresForConfig([]); // Clear manual suggestions
-      }
-    } else {
-      // If no genre selected, revert to default description for current config
-      const currentConfig = getCurrentCurve();
-      if (currentConfig) {
-        setCurrentDescription(currentConfig.description);
-        const genres = genreRecommendations
-          .filter(
-            (rec) =>
-              rec.recommendedMode === selectedMode &&
-              rec.recommendedFilter === selectedFilter
-          )
-          .map((rec) => rec.genre);
-        setSuggestedGenresForConfig(genres);
-      }
-    }
-  };
-
-  const currentCurveData = getCurrentCurve()?.curve || [];
-
-  // Custom Tick Formatter for XAxis (logarithmic scale)
-  const formatXAxis = (tickItem) => {
-    if (tickItem >= 1000) {
-      return `${tickItem / 1000}k`;
-    }
-    return tickItem;
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black text-gray-100 font-inter p-4 sm:p-8 flex flex-col items-center">
-      <style>
-        {`
-          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-          body { font-family: 'Inter', sans-serif; }
-        `}
-      </style>
-
-      {/* Header */}
-      <h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-500 mb-6 text-center">
-        IEM Sound Explorer
-      </h1>
-      <p className="text-lg text-gray-300 mb-8 text-center max-w-2xl">
-        Discover the perfect sound for your In-Ear Monitors. Select configurations or
-        choose your favorite genre for a personalized audio experience.
-      </p>
-
-      {/* Controls Section */}
-      <div className="w-full max-w-4xl bg-gray-800 bg-opacity-70 backdrop-blur-sm rounded-xl shadow-lg p-6 mb-8 border border-gray-700 flex flex-col lg:flex-row lg:space-x-8 space-y-6 lg:space-y-0">
-        {/* Mode Selection */}
-        <div className="flex-1">
-          <h2 className="text-xl font-semibold text-gray-200 mb-3">Sound Mode</h2>
-          <div className="flex bg-gray-700 rounded-full p-1 shadow-inner">
-            <button
-              onClick={() => setSelectedMode("Pop")}
-              className={`flex-1 py-3 px-4 rounded-full text-lg font-medium transition-all duration-300 ${
-                selectedMode === "Pop"
-                  ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-md"
-                  : "text-gray-300 hover:bg-gray-600 hover:text-white"
-              }`}
-            >
-              <Sun className="inline-block mr-2" size={20} /> Pop Mode
-            </button>
-            <button
-              onClick={() => setSelectedMode("Monitor")}
-              className={`flex-1 py-3 px-4 rounded-full text-lg font-medium transition-all duration-300 ${
-                selectedMode === "Monitor"
-                  ? "bg-gradient-to-r from-purple-600 to-blue-500 text-white shadow-md"
-                  : "text-gray-300 hover:bg-gray-600 hover:text-white"
-              }`}
-            >
-              <Moon className="inline-block mr-2" size={20} /> Monitor Mode
-            </button>
-          </div>
+    <div class="container mx-auto p-4 lg:p-8 min-h-screen flex flex-col gap-8">
+        
+        <!-- App Title -->
+        <div class="text-center">
+            <h1 class="text-3xl md:text-4xl font-bold glowing-text-teal">The Intergalactic IEM Sonic Spectrometer</h1>
         </div>
 
-        {/* Filter Selection */}
-        <div className="flex-1">
-          <h2 className="text-xl font-semibold text-gray-200 mb-3">Acoustic Filter</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {filters.map((filter) => (
-              <button
-                key={filter}
-                onClick={() => setSelectedFilter(filter)}
-                className={`py-3 px-4 rounded-lg text-sm font-medium transition-all duration-300 border ${
-                  selectedFilter === filter
-                    ? "bg-gradient-to-r from-green-400 to-teal-500 text-white border-green-500 shadow-md transform scale-105"
-                    : "bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600 hover:border-gray-500 hover:text-white"
-                }`}
-              >
-                {filter}
-              </button>
-            ))}
-          </div>
+        <!-- Top Section: Genres -->
+        <div class="glass-panel rounded-2xl p-6 w-full">
+            <h2 class="text-2xl font-bold mb-4 text-center glowing-text-purple">Select your Genre</h2>
+            <div id="genre-grid" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-3 text-center">
+                <!-- Genre buttons will be injected here -->
+            </div>
         </div>
-      </div>
 
-      {/* Genre Recommendation */}
-      <div className="w-full max-w-4xl bg-gray-800 bg-opacity-70 backdrop-blur-sm rounded-xl shadow-lg p-6 mb-8 border border-gray-700">
-        <h2 className="text-xl font-semibold text-gray-200 mb-3">
-          Or, Find by Genre:
-        </h2>
-        <div className="relative">
-          <select
-            value={selectedGenre}
-            onChange={handleGenreChange}
-            className="block w-full py-3 px-4 pr-10 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none transition-colors duration-200"
-            style={{ WebkitAppearance: 'none', MozAppearance: 'none' }} // Hide default arrow
-          >
-            <option value="">Select Your Favorite Genre</option>
-            {genreRecommendations.map((rec) => (
-              <option key={rec.genre} value={rec.genre}>
-                {rec.genre}
-              </option>
-            ))}
-          </select>
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-            <ChevronDown size={20} />
-          </div>
+        <!-- Main Content Area -->
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Left Panel: Controls and Info -->
+            <div class="w-full lg:w-1/3 flex flex-col gap-8">
+                <div class="glass-panel rounded-2xl p-6">
+                    <h1 class="text-2xl font-bold glowing-text-purple mb-4">IEM Mode Select</h1>
+                    <div class="flex items-center justify-between p-4 rounded-lg bg-neutral-900/50">
+                        <span id="monitor-label" class="font-bold text-teal-300">MONITOR</span>
+                        <label class="switch">
+                            <input type="checkbox" id="mode-switch">
+                            <span class="slider"></span>
+                        </label>
+                        <span id="pop-label" class="text-neutral-500">POP</span>
+                    </div>
+
+                    <div class="mt-8">
+                        <h2 id="filter-title" class="text-xl font-semibold mb-3 glowing-text-purple">Filter</h2>
+                        <div id="filter-selector" class="flex justify-around items-center p-3 rounded-lg bg-neutral-900/50">
+                            <!-- Filter buttons will be injected here -->
+                        </div>
+                    </div>
+                </div>
+                 <div id="description-panel" class="glass-panel rounded-2xl p-6 flex-grow">
+                    <h3 class="font-bold text-lg mb-2 text-purple-300" id="description-title">Welcome</h3>
+                    <p id="description-text" class="text-neutral-300">Select a genre to get a recommendation, or enter "Free-Play" mode by changing the settings manually.</p>
+                </div>
+            </div>
+
+            <!-- Right Panel: Graph -->
+            <div class="w-full lg:w-2/3 flex flex-col">
+                <div class="glass-panel rounded-2xl p-6 flex-grow">
+                    <h2 class="text-xl font-semibold mb-4 text-center">Frequency Response</h2>
+                    <div class="w-full h-80 lg:h-full">
+                        <canvas id="freq-chart"></canvas>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-
-
-      {/* Frequency Response Chart */}
-      <div className="w-full max-w-4xl bg-gray-800 bg-opacity-70 backdrop-blur-sm rounded-xl shadow-lg p-6 mb-8 border border-gray-700">
-        <h2 className="text-xl font-semibold text-gray-200 mb-4 text-center">
-          Frequency Response Curve
-        </h2>
-        <p className="text-lg text-gray-300 mb-2 text-center">
-          Current Configuration:{" "}
-          <span className="font-bold text-purple-400">
-            {selectedMode} Mode
-          </span>{" "}
-          with{" "}
-          <span className="font-bold text-green-400">
-            {selectedFilter} Filter
-          </span>
-        </p>
-
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart
-            data={currentCurveData}
-            margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="#4a4a4a" />
-            <XAxis
-              dataKey="freq"
-              type="number"
-              scale="log"
-              domain={["dataMin", "dataMax"]}
-              tickFormatter={formatXAxis}
-              stroke="#888888"
-              tick={{ fill: '#a0a0a0', fontSize: 12 }}
-              interval="preserveStartEnd"
-              minTickGap={5}
-            />
-            <YAxis
-              domain={['dataMin - 5', 'dataMax + 5']} // Adjust Y-axis dynamically
-              stroke="#888888"
-              tick={{ fill: '#a0a0a0', fontSize: 12 }}
-              label={{ value: 'dB', angle: -90, position: 'insideLeft', fill: '#a0a0a0' }}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "#333",
-                border: "1px solid #555",
-                borderRadius: "8px",
-                color: "#eee",
-              }}
-              labelStyle={{ color: "#888" }}
-              formatter={(value, name, props) => [`${value.toFixed(1)} dB`, `Freq: ${formatXAxis(props.payload.freq)}Hz`]}
-            />
-            <Line
-              type="monotone"
-              dataKey="db"
-              stroke="#82ca9d"
-              strokeWidth={3}
-              dot={false}
-              activeDot={{ r: 6, fill: '#82ca9d', stroke: '#82ca9d', strokeWidth: 2 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Description and Suggestions */}
-      <div className="w-full max-w-4xl bg-gray-800 bg-opacity-70 backdrop-blur-sm rounded-xl shadow-lg p-6 mb-8 border border-gray-700">
-        <h2 className="text-xl font-semibold text-gray-200 mb-3">
-          Sound Profile & Recommendations:
-        </h2>
-        <p className="text-gray-300 mb-4 leading-relaxed">
-          {currentDescription}
-        </p>
-        {suggestedGenresForConfig.length > 0 && (
-          <div>
-            <h3 className="text-lg font-semibold text-gray-200 mb-2">
-              Best Suited Genres for this Configuration:
-            </h3>
-            <ul className="list-disc list-inside text-gray-300">
-              {suggestedGenresForConfig.map((genre, index) => (
-                <li key={index}>{genre}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
-
-      {/* Footer */}
-      <footer className="text-gray-500 text-sm mt-8 text-center">
-        <p>&copy; 2025 IEM Sound Explorer. Data approximated from manual.</p>
-      </footer>
     </div>
-  );
-}
 
-export default App;
+    <script>
+        // --- DATA ---
+        const filterData = {
+            Black: { color: 0x444444, adjustment: 0, recommendedGenres: ["Classic Rock", "Yacht Rock", "Blues", "Country/Grass"] },
+            Silver: { color: 0xCCCCCC, adjustment: 6, recommendedGenres: ["Metal (Analysis)", "Classical"] },
+            Blue: { color: 0x4169E1, adjustment: 3, recommendedGenres: ["Metal", "Dance/Electronic"] },
+            Gold: { color: 0xDAA520, adjustment: -3, recommendedGenres: ["Jazz", "Acoustic/Folk", "R&B"] },
+            Red: { color: 0xB22222, adjustment: -8, recommendedGenres: ["Reggae", "Funk", "Rap"] }
+        };
+
+        const genreData = {
+            "Classic Rock": { filter: "Black", mode: "MONITOR", description: "A neutral profile that lets the classic mid-range tones of guitars and vocals shine through with authenticity." },
+            "Yacht Rock": { filter: "Black", mode: "MONITOR", description: "Smooth and balanced, perfect for the clean production and layered instrumentation of Yacht Rock." },
+            "Metal": { filter: "Blue", mode: "MONITOR", description: "For aggressive and complex instrumentation, the Blue filter in MONITOR mode provides a +3dB boost to the upper-midrange, enhancing the bite of distorted guitars and ensuring crisp drums." },
+            "Desert Metal": { filter: "Blue", mode: "POP", description: "A powerful V-shape with enhanced mids brings out the sludgy, fuzzy guitar tones and heavy rhythm sections characteristic of the genre." },
+            "Jazz": { filter: "Gold", mode: "MONITOR", description: "A relaxed upper-midrange allows for a smooth, natural presentation of horns, pianos, and vocals without any harshness." },
+            "Reggae": { filter: "Red", mode: "POP", description: "Deep, powerful bass and a laid-back top end create the perfect vibe for iconic reggae basslines and relaxed grooves." },
+            "Dance/Electronic": { filter: "Blue", mode: "POP", description: "Combines impactful bass with exciting, clear highs, making synths and electronic beats feel energetic and immersive." },
+            "Classical": { filter: "Silver", mode: "MONITOR", description: "Maximizes detail retrieval, bringing out the subtle nuances of orchestral instruments and complex arrangements." },
+            "Acoustic/Folk": { filter: "Gold", mode: "MONITOR", description: "A warm, intimate sound that beautifully renders the natural timbre of acoustic guitars and vocals." },
+            "Country/Grass": { filter: "Black", mode: "MONITOR", description: "A balanced and honest presentation that's ideal for the intricate string work and heartfelt vocals of country and bluegrass." },
+            "Blues": { filter: "Black", mode: "MONITOR", description: "Delivers a raw and expressive midrange, perfect for capturing the soul of blues guitar and vocals." },
+            "R&B": { filter: "Gold", mode: "POP", description: "Smooth, rich bass combined with silky vocals creates a lush and soulful listening experience." },
+            "Funk": { filter: "Red", mode: "POP", description: "This warm and bass-rich signature is excellent for groovy basslines and the rhythmic complexity of Funk." },
+            "Rap": { filter: "Red", mode: "POP", description: "Emphasizes the low-end beat and vocal delivery, providing a powerful and engaging sound for modern and classic rap." },
+        };
+
+        // --- STATE ---
+        let currentFilter = 'Black';
+        let currentMode = 'MONITOR'; // 'MONITOR' or 'POP'
+        let isFreePlay = true;
+        let activeGenre = null;
+
+        // --- THREE.JS SETUP ---
+        let scene, camera, renderer;
+        const rendererContainer = document.getElementById('renderer-container');
+
+        function init3D() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            rendererContainer.appendChild(renderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            const keyLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            keyLight.position.set(-5, 5, 10);
+            scene.add(keyLight);
+            const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
+            fillLight.position.set(5, 2, 5);
+            scene.add(fillLight);
+            const purpleLight = new THREE.PointLight(0x9D00FF, 0.5, 100);
+            purpleLight.position.set(0, 5, 5);
+            scene.add(purpleLight);
+
+            // 3D OBJECTS REMOVED AS PER REQUEST
+            
+            camera.position.z = 5;
+
+            animate();
+            
+            window.addEventListener('resize', onWindowResize, false);
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            // Animation for 3D objects removed
+            renderer.render(scene, camera);
+        }
+        
+        function animateFilterChange(newFilterName) {
+            // Animation for 3D objects removed
+        }
+
+        function animateSwitchToggle(mode) {
+           // Animation for 3D objects removed
+        }
+
+
+        // --- CHART.JS SETUP ---
+        let freqChart;
+        const baseFrequencies = [20, 50, 100, 200, 500, 1000, 1500, 2000, 3000, 4000, 5000, 8000, 10000, 15000, 20000];
+        const monitorCurve = [5, 4, 2, 0, 0, 0, 0, 1, 2, 3, 2, 4, 3, 2, 1];
+        const popCurve = [8, 7, 5, 2, -1, -2, -2, 0, 3, 4, 3, 5, 4, 3, 2];
+        const chartLineColor = '#00F6F6'; // Neon Teal
+
+        function initChart() {
+            const ctx = document.getElementById('freq-chart').getContext('2d');
+            
+            const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.clientHeight);
+            gradient.addColorStop(0, 'rgba(0, 246, 246, 0.5)');
+            gradient.addColorStop(1, 'rgba(0, 246, 246, 0)');
+
+            freqChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: baseFrequencies.map(f => f >= 1000 ? `${f/1000}k` : f),
+                    datasets: [{
+                        label: 'Response',
+                        data: calculateCurve(),
+                        borderColor: chartLineColor,
+                        backgroundColor: gradient,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        borderWidth: 3,
+                        shadowColor: 'rgba(0, 246, 246, 0.8)',
+                        shadowBlur: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: { color: '#a3a3a3' }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: { color: '#a3a3a3', stepSize: 5 },
+                            min: -10,
+                            max: 15,
+                            title: {
+                                display: true,
+                                text: 'dB',
+                                color: '#a3a3a3'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function calculateCurve() {
+            const base = currentMode === 'MONITOR' ? monitorCurve : popCurve;
+            const adjustment = filterData[currentFilter].adjustment;
+            return base.map((val, index) => {
+                const freq = baseFrequencies[index];
+                if (freq >= 1500 && freq <= 5000) {
+                    return val + adjustment;
+                }
+                return val;
+            });
+        }
+
+        function updateChart() {
+            freqChart.data.datasets[0].data = calculateCurve();
+            freqChart.update();
+        }
+
+        // --- UI & LOGIC ---
+        const filterSelector = document.getElementById('filter-selector');
+        const genreGrid = document.getElementById('genre-grid');
+        const modeSwitch = document.getElementById('mode-switch');
+        const monitorLabel = document.getElementById('monitor-label');
+        const popLabel = document.getElementById('pop-label');
+        const descriptionTitle = document.getElementById('description-title');
+        const descriptionText = document.getElementById('description-text');
+        const filterTitle = document.getElementById('filter-title');
+        const activeFilterBorderColor = 'border-pink-500'; // Neon Pink
+
+        function setupUI() {
+            // Filters
+            Object.keys(filterData).forEach(name => {
+                const btn = document.createElement('button');
+                btn.id = `filter-${name}`;
+                btn.className = 'w-10 h-10 rounded-full border-2 border-transparent transition-all duration-300 transform-gpu';
+                btn.style.backgroundColor = new THREE.Color(filterData[name].color).getStyle();
+                btn.onclick = () => selectFilter(name);
+                filterSelector.appendChild(btn);
+            });
+
+            // Genres
+            Object.keys(genreData).forEach(name => {
+                const btn = document.createElement('button');
+                btn.textContent = name;
+                btn.id = `genre-${name.replace(/[/ ]/g, '-')}`;
+                btn.className = 'genre-btn p-2 rounded-lg bg-neutral-700/60 text-xs sm:text-sm';
+                btn.onclick = () => selectGenre(name);
+                genreGrid.appendChild(btn);
+            });
+
+            // Mode Switch
+            modeSwitch.onchange = () => {
+                selectMode(modeSwitch.checked ? 'POP' : 'MONITOR');
+            };
+            
+            updateUI();
+        }
+        
+        function updateUI() {
+            // Update filter buttons
+            document.querySelectorAll('#filter-selector button').forEach(btn => {
+                const filterName = btn.id.split('-')[1];
+                if (filterName === currentFilter) {
+                    btn.classList.add(activeFilterBorderColor, 'scale-125');
+                    btn.classList.remove('border-transparent');
+                } else {
+                    btn.classList.remove(activeFilterBorderColor, 'scale-125');
+                    btn.classList.add('border-transparent');
+                }
+            });
+
+            // Update mode switch
+            modeSwitch.checked = (currentMode === 'POP');
+            if (currentMode === 'MONITOR') {
+                monitorLabel.classList.add('text-teal-300', 'font-bold');
+                monitorLabel.classList.remove('text-neutral-500');
+                popLabel.classList.remove('text-teal-300', 'font-bold');
+                popLabel.classList.add('text-neutral-500');
+            } else {
+                popLabel.classList.add('text-teal-300', 'font-bold');
+                popLabel.classList.remove('text-neutral-500');
+                monitorLabel.classList.remove('text-teal-300', 'font-bold');
+                monitorLabel.classList.add('text-neutral-500');
+            }
+
+            // Update genre buttons
+             document.querySelectorAll('#genre-grid button').forEach(btn => {
+                const btnGenreName = btn.textContent;
+                if (btnGenreName === activeGenre) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            
+            // Update description and titles
+            if (isFreePlay) {
+                descriptionTitle.textContent = "Free-Play Mode";
+                filterTitle.textContent = "Filter Selection";
+                const suggestedGenres = findMatchingGenres();
+                if (suggestedGenres.length > 0) {
+                    descriptionText.textContent = `This signature is great for: ${suggestedGenres.join(', ')}.`;
+                } else {
+                    descriptionText.textContent = "You've discovered a unique sound! Experiment to see what genres it fits best.";
+                }
+            } else {
+                descriptionTitle.textContent = activeGenre;
+                descriptionText.textContent = genreData[activeGenre].description;
+                filterTitle.innerHTML = `Optimal Filter for <span class="glowing-text-teal">${activeGenre}</span>`;
+            }
+
+            updateChart();
+        }
+
+        function selectFilter(name) {
+            if (currentFilter === name) return;
+            isFreePlay = true;
+            activeGenre = null;
+            currentFilter = name;
+            animateFilterChange(name);
+            updateUI();
+        }
+
+        function selectMode(mode) {
+            if (currentMode === mode) return;
+            isFreePlay = true;
+            activeGenre = null;
+            currentMode = mode;
+            animateSwitchToggle(mode);
+            updateUI();
+        }
+
+        function selectGenre(name) {
+            isFreePlay = false;
+            activeGenre = name;
+            const config = genreData[name];
+            
+            if (currentFilter !== config.filter) {
+                currentFilter = config.filter;
+                animateFilterChange(currentFilter);
+            }
+            if (currentMode !== config.mode) {
+                currentMode = config.mode;
+                animateSwitchToggle(currentMode);
+            }
+            
+            updateUI();
+        }
+        
+        function findMatchingGenres() {
+            const matches = [];
+            for (const genre in genreData) {
+                if (genreData[genre].filter === currentFilter && genreData[genre].mode === currentMode) {
+                    matches.push(genre);
+                }
+            }
+            return matches;
+        }
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            init3D();
+            initChart();
+            setupUI();
+            selectGenre("Classic Rock"); // Start with a default genre
+        });
+
+    </script>
+</body>
+</html>
