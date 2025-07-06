@@ -1,0 +1,425 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { ChevronDown, Moon, Sun } from 'lucide-react'; // Using Lucide React for icons
+
+// Approximated Frequency Response Data from the manual images
+// Frequencies (Hz): [20, 50, 100, 200, 500, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 12000, 15000, 20000]
+const frequencyResponseData = [
+  // Pop Mode Curves
+  {
+    mode: "Pop",
+    filter: "Stainless Steel",
+    curve: [
+      { freq: 20, db: 95 }, { freq: 50, db: 100 }, { freq: 100, db: 105 }, { freq: 200, db: 108 }, { freq: 500, db: 110 },
+      { freq: 1000, db: 110 }, { freq: 2000, db: 107 }, { freq: 3000, db: 105 }, { freq: 4000, db: 108 }, { freq: 5000, db: 112 },
+      { freq: 6000, db: 110 }, { freq: 7000, db: 108 }, { freq: 8000, db: 105 }, { freq: 9000, db: 103 }, { freq: 10000, db: 105 },
+      { freq: 12000, db: 100 }, { freq: 15000, db: 95 }, { freq: 20000, db: 90 },
+    ],
+    description: "A balanced sound with a slight emphasis on bass and upper mids, typical for a lively 'Pop' signature.",
+  },
+  {
+    mode: "Pop",
+    filter: "Red",
+    curve: [
+      { freq: 20, db: 97 }, { freq: 50, db: 102 }, { freq: 100, db: 107 }, { freq: 200, db: 110 }, { freq: 500, db: 112 },
+      { freq: 1000, db: 112 }, { freq: 2000, db: 108 }, { freq: 3000, db: 106 }, { freq: 4000, db: 109 }, { freq: 5000, db: 111 },
+      { freq: 6000, db: 109 }, { freq: 7000, db: 107 }, { freq: 8000, db: 104 }, { freq: 9000, db: 102 }, { freq: 10000, db: 104 },
+      { freq: 12000, db: 99 }, { freq: 15000, db: 94 }, { freq: 20000, db: 89 },
+    ],
+    description: "Enhanced bass and a slightly smoother treble, providing a warm and impactful sound.",
+  },
+  {
+    mode: "Pop",
+    filter: "Blue",
+    curve: [
+      { freq: 20, db: 95 }, { freq: 50, db: 100 }, { freq: 100, db: 105 }, { freq: 200, db: 108 }, { freq: 500, db: 110 },
+      { freq: 1000, db: 110 }, { freq: 2000, db: 107 }, { freq: 3000, db: 105 }, { freq: 4000, db: 108 }, { freq: 5000, db: 112 },
+      { freq: 6000, db: 110 }, { freq: 7000, db: 108 }, { freq: 8000, db: 105 }, { freq: 9000, db: 103 }, { freq: 10000, db: 105 },
+      { freq: 12000, db: 100 }, { freq: 15000, db: 95 }, { freq: 20000, db: 90 },
+    ],
+    description: "Very similar to Stainless Steel, offering a balanced and versatile sound with a slightly smoother high-end.",
+  },
+  {
+    mode: "Pop",
+    filter: "Green",
+    curve: [
+      { freq: 20, db: 93 }, { freq: 50, db: 98 }, { freq: 100, db: 103 }, { freq: 200, db: 106 }, { freq: 500, db: 108 },
+      { freq: 1000, db: 108 }, { freq: 2000, db: 106 }, { freq: 3000, db: 107 }, { freq: 4000, db: 110 }, { freq: 5000, db: 114 },
+      { freq: 6000, db: 112 }, { freq: 7000, db: 110 }, { freq: 8000, db: 107 }, { freq: 9000, db: 105 }, { freq: 10000, db: 107 },
+      { freq: 12000, db: 102 }, { freq: 15000, db: 97 }, { freq: 20000, db: 92 },
+    ],
+    description: "A brighter sound with less bass and more emphasis on the upper mids and lower treble, enhancing detail.",
+  },
+  {
+    mode: "Pop",
+    filter: "Gold",
+    curve: [
+      { freq: 20, db: 98 }, { freq: 50, db: 103 }, { freq: 100, db: 108 }, { freq: 200, db: 111 }, { freq: 500, db: 113 },
+      { freq: 1000, db: 113 }, { freq: 2000, db: 109 }, { freq: 3000, db: 107 }, { freq: 4000, db: 110 }, { freq: 5000, db: 115 },
+      { freq: 6000, db: 113 }, { freq: 7000, db: 111 }, { freq: 8000, db: 108 }, { freq: 9000, db: 106 }, { freq: 10000, db: 108 },
+      { freq: 12000, db: 103 }, { freq: 15000, db: 98 }, { freq: 20000, db: 93 },
+    ],
+    description: "The most V-shaped signature in Pop mode, with prominent bass and treble peaks for an energetic and impactful sound.",
+  },
+  {
+    mode: "Pop",
+    filter: "Silver",
+    curve: [
+      { freq: 20, db: 92 }, { freq: 50, db: 97 }, { freq: 100, db: 102 }, { freq: 200, db: 105 }, { freq: 500, db: 107 },
+      { freq: 1000, db: 107 }, { freq: 2000, db: 105 }, { freq: 3000, db: 103 }, { freq: 4000, db: 106 }, { freq: 5000, db: 110 },
+      { freq: 6000, db: 108 }, { freq: 7000, db: 106 }, { freq: 8000, db: 103 }, { freq: 9000, db: 101 }, { freq: 10000, db: 103 },
+      { freq: 12000, db: 98 }, { freq: 15000, db: 93 }, { freq: 20000, db: 88 },
+    ],
+    description: "A more neutral sound in Pop mode with less bass emphasis, providing a cleaner and more analytical presentation.",
+  },
+  // Monitor Mode Curves
+  {
+    mode: "Monitor",
+    filter: "Stainless Steel",
+    curve: [
+      { freq: 20, db: 90 }, { freq: 50, db: 95 }, { freq: 100, db: 100 }, { freq: 200, db: 103 }, { freq: 500, db: 105 },
+      { freq: 1000, db: 105 }, { freq: 2000, db: 103 }, { freq: 3000, db: 100 }, { freq: 4000, db: 102 }, { freq: 5000, db: 105 },
+      { freq: 6000, db: 103 }, { freq: 7000, db: 101 }, { freq: 8000, db: 98 }, { freq: 9000, db: 96 }, { freq: 10000, db: 98 },
+      { freq: 12000, db: 93 }, { freq: 15000, db: 88 }, { freq: 20000, db: 83 },
+    ],
+    description: "A generally flatter and more neutral sound signature compared to Pop mode, designed for accurate monitoring.",
+  },
+  {
+    mode: "Monitor",
+    filter: "Red",
+    curve: [
+      { freq: 20, db: 92 }, { freq: 50, db: 97 }, { freq: 100, db: 102 }, { freq: 200, db: 105 }, { freq: 500, db: 107 },
+      { freq: 1000, db: 107 }, { freq: 2000, db: 104 }, { freq: 3000, db: 101 }, { freq: 4000, db: 103 }, { freq: 5000, db: 106 },
+      { freq: 6000, db: 104 }, { freq: 7000, db: 102 }, { freq: 8000, db: 99 }, { freq: 9000, db: 97 }, { freq: 10000, db: 99 },
+      { freq: 12000, db: 94 }, { freq: 15000, db: 89 }, { freq: 20000, db: 84 },
+    ],
+    description: "Slightly more bass emphasis than the standard Monitor mode, offering a fuller sound while maintaining neutrality.",
+  },
+  {
+    mode: "Monitor",
+    filter: "Blue",
+    curve: [
+      { freq: 20, db: 91 }, { freq: 50, db: 96 }, { freq: 100, db: 101 }, { freq: 200, db: 104 }, { freq: 500, db: 106 },
+      { freq: 1000, db: 106 }, { freq: 2000, db: 103 }, { freq: 3000, db: 100 }, { freq: 4000, db: 102 }, { freq: 5000, db: 105 },
+      { freq: 6000, db: 103 }, { freq: 7000, db: 101 }, { freq: 8000, db: 98 }, { freq: 9000, db: 96 }, { freq: 10000, db: 98 },
+      { freq: 12000, db: 93 }, { freq: 15000, db: 88 }, { freq: 20000, db: 83 },
+    ],
+    description: "Very similar to Stainless Steel in Monitor mode, providing a balanced and accurate sound with a subtle warmth.",
+  },
+  {
+    mode: "Monitor",
+    filter: "Green",
+    curve: [
+      { freq: 20, db: 88 }, { freq: 50, db: 93 }, { freq: 100, db: 98 }, { freq: 200, db: 101 }, { freq: 500, db: 103 },
+      { freq: 1000, db: 103 }, { freq: 2000, db: 102 }, { freq: 3000, db: 101 }, { freq: 4000, db: 103 }, { freq: 5000, db: 106 },
+      { freq: 6000, db: 104 }, { freq: 7000, db: 102 }, { freq: 8000, db: 99 }, { freq: 9000, db: 97 }, { freq: 10000, db: 99 },
+      { freq: 12000, db: 94 }, { freq: 15000, db: 89 }, { freq: 20000, db: 84 },
+    ],
+    description: "A slightly brighter Monitor sound, emphasizing clarity in the upper mids and lower treble for detailed listening.",
+  },
+  {
+    mode: "Monitor",
+    filter: "Gold",
+    curve: [
+      { freq: 20, db: 93 }, { freq: 50, db: 98 }, { freq: 100, db: 103 }, { freq: 200, db: 106 }, { freq: 500, db: 108 },
+      { freq: 1000, db: 108 }, { freq: 2000, db: 105 }, { freq: 3000, db: 102 }, { freq: 4000, db: 104 }, { freq: 5000, db: 107 },
+      { freq: 6000, db: 105 }, { freq: 7000, db: 103 }, { freq: 8000, db: 100 }, { freq: 9000, db: 98 }, { freq: 10000, db: 100 },
+      { freq: 12000, db: 95 }, { freq: 15000, db: 90 }, { freq: 20000, db: 85 },
+    ],
+    description: "A more dynamic Monitor sound with a subtle V-shape, providing a bit more excitement while retaining accuracy.",
+  },
+  {
+    mode: "Monitor",
+    filter: "Silver",
+    curve: [
+      { freq: 20, db: 87 }, { freq: 50, db: 92 }, { freq: 100, db: 97 }, { freq: 200, db: 100 }, { freq: 500, db: 102 },
+      { freq: 1000, db: 102 }, { freq: 2000, db: 100 }, { freq: 3000, db: 97 }, { freq: 4000, db: 99 }, { freq: 5000, db: 102 },
+      { freq: 6000, db: 100 }, { freq: 7000, db: 98 }, { freq: 8000, db: 95 }, { freq: 9000, db: 93 }, { freq: 10000, db: 95 },
+      { freq: 12000, db: 90 }, { freq: 15000, db: 85 }, { freq: 20000, db: 80 },
+    ],
+    description: "The most neutral and flat signature in Monitor mode, ideal for critical listening and analytical tasks.",
+  },
+];
+
+// Genre Recommendation Data
+const genreRecommendations = [
+  { genre: "Rock/Classic Rock", recommendedMode: "Pop", recommendedFilter: "Red", description: "This configuration provides a punchy bass and clear, energetic mids, perfect for classic rock anthems and modern rock riffs." },
+  { genre: "Yacht Rock", recommendedMode: "Pop", recommendedFilter: "Blue", description: "A smooth and laid-back sound with a slightly elevated bass, ideal for the relaxed grooves of yacht rock." },
+  { genre: "Metal", recommendedMode: "Pop", recommendedFilter: "Gold", description: "With an aggressive V-shape, this setting delivers impactful bass for heavy drums and pronounced highs for cymbal clarity, essential for metal." },
+  { genre: "Stoner Rock", recommendedMode: "Pop", recommendedFilter: "Red", description: "A warm and weighty sound with a strong low-end presence, enhancing the thick, fuzzy guitar tones and powerful rhythm sections of stoner rock." },
+  { genre: "Jazz", recommendedMode: "Monitor", recommendedFilter: "Silver", description: "A neutral and accurate sound signature that allows for precise instrument separation and natural timbre, perfect for intricate jazz performances." },
+  { genre: "Reggae", recommendedMode: "Pop", recommendedFilter: "Red", description: "Emphasizes the deep, resonant basslines and clear, rhythmic percussion crucial to reggae music." },
+  { genre: "Dance/Electronic", recommendedMode: "Pop", recommendedFilter: "Gold", description: "Delivers a powerful bass response and sparkling highs, providing the energy and impact needed for electronic dance music." },
+  { genre: "Classical", recommendedMode: "Monitor", recommendedFilter: "Silver", description: "A flat and uncolored sound, ensuring faithful reproduction of orchestral dynamics and instrument nuances, ideal for classical pieces." },
+  { genre: "Acoustic/Folk", recommendedMode: "Monitor", recommendedFilter: "Green", description: "Provides a natural and intimate soundstage, bringing out the warmth of acoustic instruments and the clarity of vocals." },
+  { genre: "Country/Bluegrass", recommendedMode: "Monitor", recommendedFilter: "Green", description: "Offers a clear and articulate sound, highlighting vocals and the distinct textures of acoustic instruments common in country and bluegrass." },
+  { genre: "Blues", recommendedMode: "Pop", recommendedFilter: "Blue", description: "A rich and warm sound with a slight mid-range emphasis, perfect for soulful vocals and the expressive tones of blues guitars." },
+  { genre: "R&B", recommendedMode: "Pop", recommendedFilter: "Red", description: "Delivers a smooth, impactful bass and clear, present vocals, creating a lush and engaging sound for R&B tracks." },
+  { genre: "Funk", recommendedMode: "Pop", recommendedFilter: "Gold", description: "A dynamic and energetic sound with punchy bass and crisp highs, accentuating the rhythmic complexity and vibrant instrumentation of funk." },
+  { genre: "Rap", recommendedMode: "Pop", recommendedFilter: "Gold", description: "Provides a deep, resonant bass and clear vocal presence, crucial for the impactful beats and articulate lyrics of rap music." },
+];
+
+const filters = ["Stainless Steel", "Red", "Blue", "Green", "Gold", "Silver"];
+
+function App() {
+  const [selectedMode, setSelectedMode] = useState("Pop");
+  const [selectedFilter, setSelectedFilter] = useState("Stainless Steel");
+  const [selectedGenre, setSelectedGenre] = useState("");
+  const [currentDescription, setCurrentDescription] = useState("");
+  const [suggestedGenresForConfig, setSuggestedGenresForConfig] = useState([]);
+
+  // Function to get the current frequency curve based on selections
+  const getCurrentCurve = useCallback(() => {
+    return frequencyResponseData.find(
+      (data) => data.mode === selectedMode && data.filter === selectedFilter
+    );
+  }, [selectedMode, selectedFilter]);
+
+  // Effect to update description and suggested genres when mode/filter changes
+  useEffect(() => {
+    const currentConfig = getCurrentCurve();
+    if (currentConfig) {
+      setCurrentDescription(currentConfig.description);
+
+      // Determine suggested genres for the current configuration
+      const genres = genreRecommendations
+        .filter(
+          (rec) =>
+            rec.recommendedMode === selectedMode &&
+            rec.recommendedFilter === selectedFilter
+        )
+        .map((rec) => rec.genre);
+      setSuggestedGenresForConfig(genres);
+    }
+    // Reset selected genre when manual configuration changes
+    setSelectedGenre("");
+  }, [selectedMode, selectedFilter, getCurrentCurve]);
+
+  // Handle genre selection
+  const handleGenreChange = (e) => {
+    const genre = e.target.value;
+    setSelectedGenre(genre);
+
+    if (genre) {
+      const recommendation = genreRecommendations.find(
+        (rec) => rec.genre === genre
+      );
+      if (recommendation) {
+        setSelectedMode(recommendation.recommendedMode);
+        setSelectedFilter(recommendation.recommendedFilter);
+        setCurrentDescription(recommendation.description);
+        setSuggestedGenresForConfig([]); // Clear manual suggestions
+      }
+    } else {
+      // If no genre selected, revert to default description for current config
+      const currentConfig = getCurrentCurve();
+      if (currentConfig) {
+        setCurrentDescription(currentConfig.description);
+        const genres = genreRecommendations
+          .filter(
+            (rec) =>
+              rec.recommendedMode === selectedMode &&
+              rec.recommendedFilter === selectedFilter
+          )
+          .map((rec) => rec.genre);
+        setSuggestedGenresForConfig(genres);
+      }
+    }
+  };
+
+  const currentCurveData = getCurrentCurve()?.curve || [];
+
+  // Custom Tick Formatter for XAxis (logarithmic scale)
+  const formatXAxis = (tickItem) => {
+    if (tickItem >= 1000) {
+      return `${tickItem / 1000}k`;
+    }
+    return tickItem;
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black text-gray-100 font-inter p-4 sm:p-8 flex flex-col items-center">
+      <style>
+        {`
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+          body { font-family: 'Inter', sans-serif; }
+        `}
+      </style>
+
+      {/* Header */}
+      <h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-500 mb-6 text-center">
+        IEM Sound Explorer
+      </h1>
+      <p className="text-lg text-gray-300 mb-8 text-center max-w-2xl">
+        Discover the perfect sound for your In-Ear Monitors. Select configurations or
+        choose your favorite genre for a personalized audio experience.
+      </p>
+
+      {/* Controls Section */}
+      <div className="w-full max-w-4xl bg-gray-800 bg-opacity-70 backdrop-blur-sm rounded-xl shadow-lg p-6 mb-8 border border-gray-700 flex flex-col lg:flex-row lg:space-x-8 space-y-6 lg:space-y-0">
+        {/* Mode Selection */}
+        <div className="flex-1">
+          <h2 className="text-xl font-semibold text-gray-200 mb-3">Sound Mode</h2>
+          <div className="flex bg-gray-700 rounded-full p-1 shadow-inner">
+            <button
+              onClick={() => setSelectedMode("Pop")}
+              className={`flex-1 py-3 px-4 rounded-full text-lg font-medium transition-all duration-300 ${
+                selectedMode === "Pop"
+                  ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-md"
+                  : "text-gray-300 hover:bg-gray-600 hover:text-white"
+              }`}
+            >
+              <Sun className="inline-block mr-2" size={20} /> Pop Mode
+            </button>
+            <button
+              onClick={() => setSelectedMode("Monitor")}
+              className={`flex-1 py-3 px-4 rounded-full text-lg font-medium transition-all duration-300 ${
+                selectedMode === "Monitor"
+                  ? "bg-gradient-to-r from-purple-600 to-blue-500 text-white shadow-md"
+                  : "text-gray-300 hover:bg-gray-600 hover:text-white"
+              }`}
+            >
+              <Moon className="inline-block mr-2" size={20} /> Monitor Mode
+            </button>
+          </div>
+        </div>
+
+        {/* Filter Selection */}
+        <div className="flex-1">
+          <h2 className="text-xl font-semibold text-gray-200 mb-3">Acoustic Filter</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {filters.map((filter) => (
+              <button
+                key={filter}
+                onClick={() => setSelectedFilter(filter)}
+                className={`py-3 px-4 rounded-lg text-sm font-medium transition-all duration-300 border ${
+                  selectedFilter === filter
+                    ? "bg-gradient-to-r from-green-400 to-teal-500 text-white border-green-500 shadow-md transform scale-105"
+                    : "bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600 hover:border-gray-500 hover:text-white"
+                }`}
+              >
+                {filter}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Genre Recommendation */}
+      <div className="w-full max-w-4xl bg-gray-800 bg-opacity-70 backdrop-blur-sm rounded-xl shadow-lg p-6 mb-8 border border-gray-700">
+        <h2 className="text-xl font-semibold text-gray-200 mb-3">
+          Or, Find by Genre:
+        </h2>
+        <div className="relative">
+          <select
+            value={selectedGenre}
+            onChange={handleGenreChange}
+            className="block w-full py-3 px-4 pr-10 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none transition-colors duration-200"
+            style={{ WebkitAppearance: 'none', MozAppearance: 'none' }} // Hide default arrow
+          >
+            <option value="">Select Your Favorite Genre</option>
+            {genreRecommendations.map((rec) => (
+              <option key={rec.genre} value={rec.genre}>
+                {rec.genre}
+              </option>
+            ))}
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+            <ChevronDown size={20} />
+          </div>
+        </div>
+      </div>
+
+
+      {/* Frequency Response Chart */}
+      <div className="w-full max-w-4xl bg-gray-800 bg-opacity-70 backdrop-blur-sm rounded-xl shadow-lg p-6 mb-8 border border-gray-700">
+        <h2 className="text-xl font-semibold text-gray-200 mb-4 text-center">
+          Frequency Response Curve
+        </h2>
+        <p className="text-lg text-gray-300 mb-2 text-center">
+          Current Configuration:{" "}
+          <span className="font-bold text-purple-400">
+            {selectedMode} Mode
+          </span>{" "}
+          with{" "}
+          <span className="font-bold text-green-400">
+            {selectedFilter} Filter
+          </span>
+        </p>
+
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart
+            data={currentCurveData}
+            margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="#4a4a4a" />
+            <XAxis
+              dataKey="freq"
+              type="number"
+              scale="log"
+              domain={["dataMin", "dataMax"]}
+              tickFormatter={formatXAxis}
+              stroke="#888888"
+              tick={{ fill: '#a0a0a0', fontSize: 12 }}
+              interval="preserveStartEnd"
+              minTickGap={5}
+            />
+            <YAxis
+              domain={['dataMin - 5', 'dataMax + 5']} // Adjust Y-axis dynamically
+              stroke="#888888"
+              tick={{ fill: '#a0a0a0', fontSize: 12 }}
+              label={{ value: 'dB', angle: -90, position: 'insideLeft', fill: '#a0a0a0' }}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "#333",
+                border: "1px solid #555",
+                borderRadius: "8px",
+                color: "#eee",
+              }}
+              labelStyle={{ color: "#888" }}
+              formatter={(value, name, props) => [`${value.toFixed(1)} dB`, `Freq: ${formatXAxis(props.payload.freq)}Hz`]}
+            />
+            <Line
+              type="monotone"
+              dataKey="db"
+              stroke="#82ca9d"
+              strokeWidth={3}
+              dot={false}
+              activeDot={{ r: 6, fill: '#82ca9d', stroke: '#82ca9d', strokeWidth: 2 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Description and Suggestions */}
+      <div className="w-full max-w-4xl bg-gray-800 bg-opacity-70 backdrop-blur-sm rounded-xl shadow-lg p-6 mb-8 border border-gray-700">
+        <h2 className="text-xl font-semibold text-gray-200 mb-3">
+          Sound Profile & Recommendations:
+        </h2>
+        <p className="text-gray-300 mb-4 leading-relaxed">
+          {currentDescription}
+        </p>
+        {suggestedGenresForConfig.length > 0 && (
+          <div>
+            <h3 className="text-lg font-semibold text-gray-200 mb-2">
+              Best Suited Genres for this Configuration:
+            </h3>
+            <ul className="list-disc list-inside text-gray-300">
+              {suggestedGenresForConfig.map((genre, index) => (
+                <li key={index}>{genre}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <footer className="text-gray-500 text-sm mt-8 text-center">
+        <p>&copy; 2025 IEM Sound Explorer. Data approximated from manual.</p>
+      </footer>
+    </div>
+  );
+}
+
+export default App;
