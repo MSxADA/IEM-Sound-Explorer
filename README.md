@@ -5,7 +5,7 @@ Welcome to The Intergalactic IEM Sonic Spectrometer! This is a cutting-edge web 
 The interface is designed with a sleek, neon "spaceship" aesthetic, providing a tactile and immersive feel to the digital space of audio customization.
 
 ✨ Features
-Genre-Based Recommendations: Select from a wide variety of music genres to get an instant, expert-recommended configuration. The app automatically sets the optimal IEM mode and filter for your chosen genre.
+Genre-Based Recommendations: Select from a curated list of music genres to get an instant, expert-recommended configuration. The app automatically sets the optimal IEM mode and filter for your chosen genre.
 
 Interactive Controls:
 
@@ -17,7 +17,7 @@ Real-Time Frequency Response Graph: A vibrant, neon graph instantly visualizes t
 
 Dynamic Descriptions: The app provides concise, evocative descriptions explaining why a specific configuration is ideal for a selected genre. In "Free-Play" mode, it even suggests genres that would complement your custom setup.
 
-Stunning Visuals: A dark, synthwave-inspired theme with neon purple and teal highlights creates an immersive, high-tech experience.
+Stunning Visuals: A dark, synthwave-inspired theme with neon purple, teal, and pink highlights creates an immersive, high-tech experience.
 
 Fully Responsive: The layout is optimized for a seamless experience on all devices, from desktops to mobile phones.
 
@@ -26,7 +26,7 @@ The app has two primary modes of operation:
 
 Genre Recommendation Mode (Default):
 
-Simply click on any of the genres listed at the top of the application.
+Simply click on any of the genres listed at the top of the application (e.g., "Classic Rock," "Metal," "Jazz").
 
 The controls for "IEM Mode Select" and "Filter" will automatically adjust to the recommended settings for that genre.
 
@@ -47,7 +47,7 @@ Tailwind CSS: For modern, responsive, and utility-first styling.
 
 JavaScript (ES6+): For all the application logic and interactivity.
 
-Three.js: Used for the background 3D rendering and lighting effects (though the main objects have been removed as per the final design).
+Three.js: Used for the background 3D rendering and lighting effects.
 
 GSAP (GreenSock Animation Platform): Powers the smooth animations for UI elements.
 
